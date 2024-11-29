@@ -1,0 +1,216 @@
+RPC 
+1. HelloWorldClient.java
+
+import java.net.URL;
+import javax.xml.namespace.QName;
+import javax.xml.ws.Service;
+
+public class HelloWorldClient {
+    public static void main(String[] args) throws Exception {
+        URL url = new URL("http://localhost:8080/HelloWorld?wsdl");
+        QName qname = new QName("http://rpc_helloworld/", "HelloWorldImplService");
+        Service service = Service.create(url, qname);
+        HelloWorld hello = service.getPort(HelloWorld.class);
+        System.out.println(hello.sayHello());
+    }
+}
+
+2. HelloWorldServer.java
+
+import javax.xml.ws.Endpoint;
+
+public class HelloWorldServer {
+    public static void main(String[] args) {
+        Endpoint.publish("http://localhost:8080/HelloWorld", new HelloWorldImpl());
+        System.out.println("Server is running...");
+    }
+}
+
+directry = wsimport -s src -d build/classes -p rpc_helloworld.generated http://localhost:8080/HelloWorld?wsdl
+refresh project
+run server.
+
+
+
+
+RMI CODE
+
+javac HelloImpl.java
+javac HelloServer.java
+start rmiregistry
+java HelloServer
+
+javac Helloworld.java
+javac HelloClient
+java HelloClient
+
+ 
+
+1. HelloWorld.java (Remote Interface)
+
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+public interface HelloWorld extends Remote {
+    String sayHello() throws RemoteException;
+}
+
+
+2. HelloImpl.java (Remote Implementation)
+
+import java.rmi.server.UnicastRemoteObject;
+import java.rmi.RemoteException;
+
+public class HelloImpl extends UnicastRemoteObject implements HelloWorld {
+    protected HelloImpl() throws RemoteException {
+        super();
+    }
+
+    @Override
+    public String sayHello() throws RemoteException {
+        return "Hello, World!";
+    }
+}
+
+
+3. HelloClient.java
+
+import java.rmi.Naming;
+
+public class HelloClient {
+    public static void main(String[] args) {
+        try {
+            HelloWorld hello = (HelloWorld) Naming.lookup("//localhost/Hello");
+            System.out.println(hello.sayHello());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+4. HelloServer.java
+
+import java.rmi.Naming;
+
+public class HelloServer {
+    public static void main(String[] args) {
+        try {
+            Naming.rebind("Hello", new HelloImpl());
+            System.out.println("Server is ready.");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+RMI calculator
+
+1. Remote Interface (Calculator.java)
+
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+public interface Calculator extends Remote {
+    double add(double a, double b) throws RemoteException;
+    double subtract(double a, double b) throws RemoteException;
+    double multiply(double a, double b) throws RemoteException;
+    double divide(double a, double b) throws RemoteException;
+}
+
+
+2. Remote Implementation (CalculatorImpl.java)
+
+import java.rmi.server.UnicastRemoteObject;
+import java.rmi.RemoteException;
+
+public class CalculatorImpl extends UnicastRemoteObject implements Calculator {
+    protected CalculatorImpl() throws RemoteException {
+        super();
+    }
+
+    @Override
+    public double add(double a, double b) throws RemoteException {
+        return a + b;
+    }
+
+    @Override
+    public double subtract(double a, double b) throws RemoteException {
+        return a - b;
+    }
+
+    @Override
+    public double multiply(double a, double b) throws RemoteException {
+        return a * b;
+    }
+
+    @Override
+    public double divide(double a, double b) throws RemoteException {
+        if (b == 0) throw new ArithmeticException("Division by zero is not allowed.");
+        return a / b;
+    }
+}
+
+
+3. Server (CalculatorServer.java)
+
+import java.rmi.Naming;
+
+public class CalculatorServer {
+    public static void main(String[] args) {
+        try {
+            Calculator calculator = new CalculatorImpl();
+            Naming.rebind("CalculatorService", calculator);
+            System.out.println("Calculator Server is ready.");
+        } catch (Exception e) {
+            System.err.println("Server exception: " + e.toString());
+            e.printStackTrace();
+        }
+    }
+}
+
+
+4. Client (CalculatorClient.java)
+
+import java.rmi.Naming;
+import java.util.Scanner;
+
+public class CalculatorClient {
+    public static void main(String[] args) {
+        try {
+            Calculator calculator = (Calculator) Naming.lookup("CalculatorService");
+            Scanner scanner = new Scanner(System.in);
+
+            System.out.println("Enter the first number: ");
+            double num1 = scanner.nextDouble();
+
+            System.out.println("Enter the second number: ");
+            double num2 = scanner.nextDouble();
+
+            System.out.println("Addition: " + calculator.add(num1, num2));
+            System.out.println("Subtraction: " + calculator.subtract(num1, num2));
+            System.out.println("Multiplication: " + calculator.multiply(num1, num2));
+            try {
+                System.out.println("Division: " + calculator.divide(num1, num2));
+            } catch (ArithmeticException e) {
+                System.out.println("Error: " + e.getMessage());
+            }
+            scanner.close();
+        } catch (Exception e) {
+            System.err.println("Client exception: " + e.toString());
+            e.printStackTrace();
+        }
+    }
+}
+
+
+javac Calculator.java
+javac CalculatorImpl.java
+javac CalculatorServer.java
+javac CalculatorClient.java
+start rmiregistry
+java CalculatorServer
+java CalculatorClient
+

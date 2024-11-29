@@ -1,0 +1,547 @@
+sheet 03
+
+Part B
+1. Java TCP Socket Programming
+Client Program (TCPClient.java):
+
+import java.io.*;
+import java.net.*;
+
+public class TCPClient {
+    public static void main(String[] args) {
+        String serverName = "localhost"; // Server IP or hostname
+        int port = 888; // Server port number
+
+        try {
+            // Create a socket to connect to the server
+            Socket clientSocket = new Socket(serverName, port);
+            System.out.println("Connected to server: " + serverName + " on port " + port);
+
+            // Create output stream to send data to the server
+            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+            // Create input stream to receive data from the server
+            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+            // Send a message to the server
+            String message = "Hello Server!";
+            out.println(message);
+            System.out.println("Sent to server: " + message);
+
+            // Receive response from the server
+            String response = in.readLine();
+            System.out.println("Received from server: " + response);
+
+            // Close the streams and socket
+            in.close();
+            out.close();
+            clientSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+Server Program (TCPServer.java):
+
+import java.io.*;
+import java.net.*;
+
+public class TCPServer {
+    public static void main(String[] args) {
+        int port = 888; // Port number for the server
+
+        try {
+            // Create a server socket to listen for connections
+            ServerSocket serverSocket = new ServerSocket(port);
+            System.out.println("Server is listening on port " + port);
+
+            // Accept client connections
+            Socket clientSocket = serverSocket.accept();
+            System.out.println("Client connected: " + clientSocket.getInetAddress());
+
+            // Create input and output streams
+            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+
+            // Read message from client
+            String clientMessage = in.readLine();
+            System.out.println("Received from client: " + clientMessage);
+
+            // Send response back to the client
+            String response = "Hello Client!";
+            out.println(response);
+            System.out.println("Sent to client: " + response);
+
+            // Close the streams and socket
+            in.close();
+            out.close();
+            clientSocket.close();
+            serverSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+2. Java UDP Socket Programming
+Client Program (UDPClient.java):
+
+import java.io.*;
+import java.net.*;
+
+public class UDPClient {
+    public static void main(String[] args) {
+        String serverName = "localhost"; // Server IP or hostname
+        int port = 888; // Server port number
+
+        try {
+            // Create a DatagramSocket for sending data
+            DatagramSocket socket = new DatagramSocket();
+            String message = "Hello Server!";
+            byte[] buffer = message.getBytes();
+
+            // Send message to the server
+            DatagramPacket sendPacket = new DatagramPacket(buffer, buffer.length, InetAddress.getByName(serverName), port);
+            socket.send(sendPacket);
+            System.out.println("Sent to server: " + message);
+
+            // Prepare to receive response from the server
+            byte[] receiveBuffer = new byte[1024];
+            DatagramPacket receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+            socket.receive(receivePacket);
+
+            // Convert response to string
+            String response = new String(receivePacket.getData(), 0, receivePacket.getLength());
+            System.out.println("Received from server: " + response);
+
+            // Close the socket
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+Server Program (UDPServer.java):
+
+import java.io.*;
+import java.net.*;
+
+public class UDPServer {
+    public static void main(String[] args) {
+        int port = 888; // Port number for the server
+
+        try {
+            // Create a DatagramSocket to listen for incoming packets
+            DatagramSocket socket = new DatagramSocket(port);
+            System.out.println("UDP Server is listening on port " + port);
+
+            while (true) {
+                // Prepare to receive a packet
+                byte[] receiveBuffer = new byte[1024];
+                DatagramPacket receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+                socket.receive(receivePacket);
+
+                // Convert received data to string
+                String clientMessage = new String (receivePacket.getData(), 0, receivePacket.getLength());
+                System.out.println("Received from client: " + clientMessage);
+
+                // Prepare response message
+                String response = "Hello Client!";
+                byte[] responseBuffer = response.getBytes();
+
+                // Send response back to the client
+                DatagramPacket sendPacket = new DatagramPacket(responseBuffer, responseBuffer.length, receivePacket.getAddress(), receivePacket.getPort());
+                socket.send(sendPacket);
+                System.out.println("Sent to client: " + response);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+Part C: Transferring a File Using Socket Programming
+Exercise 01: File Transfer Using TCP
+Client Program (TCPFileClient.java):
+
+import java.io.*;
+import java.net.*;
+
+public class TCPFileClient {
+    public static void main(String[] args) {
+        String serverName = "localhost"; // Server IP or hostname
+        int port = 6000; // Server port number
+        String filePath = "original.txt"; // Path to the file to be sent
+
+        try {
+            // Create a socket to connect to the server
+            Socket clientSocket = new Socket(serverName, port);
+            System.out.println("Connected to server: " + serverName + " on port " + port);
+
+            // Create output stream to send file data
+            FileInputStream fileInputStream = new FileInputStream(filePath);
+            OutputStream outputStream = clientSocket.getOutputStream();
+
+            // Read file and send it to the server
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = fileInputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+
+            // Close the streams and socket
+            fileInputStream.close();
+            outputStream.close();
+            clientSocket.close();
+            System.out.println("File sent successfully.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+Server Program (TCPFileServer.java):
+
+import java.io.*;
+import java.net.*;
+
+public class TCPFileServer {
+    public static void main(String[] args) {
+        int port = 6000; // Port number for the server
+        String outputFilePath = "copy.txt"; // Path to save the received file
+
+        try {
+            // Create a server socket to listen for connections
+            ServerSocket serverSocket = new ServerSocket(port);
+            System.out.println("Server is listening on port " + port);
+
+            // Accept client connections
+            Socket clientSocket = serverSocket.accept();
+            System.out.println("Client connected: " + clientSocket.getInetAddress());
+
+            // Create input stream to receive file data
+            InputStream inputStream = clientSocket.getInputStream();
+            FileOutputStream fileOutputStream = new FileOutputStream(outputFilePath);
+
+            // Read data from the client and save it to the file
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                fileOutputStream.write(buffer, 0, bytesRead);
+            }
+
+            // Close the streams and sockets
+            fileOutputStream.close();
+            inputStream.close();
+            clientSocket.close();
+            serverSocket.close();
+            System.out.println("File received successfully.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+Exercise 02: File Transfer Using UDP
+Client Program (UDPFileClient.java):
+
+import java.io.*;
+import java.net.*;
+
+public class UDPFileClient {
+    public static void main(String[] args) {
+        String serverName = "localhost"; // Server IP or hostname
+        int port = 6000; // Server port number
+        String filePath = "original.txt"; // Path to the file to be sent
+
+        try {
+            // Create a DatagramSocket for sending data
+            DatagramSocket socket = new DatagramSocket();
+            FileInputStream fileInputStream = new FileInputStream(filePath);
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+
+            // Read file and send it to the server in packets
+            while ((bytesRead = fileInputStream.read(buffer)) != -1) {
+                DatagramPacket sendPacket = new DatagramPacket(buffer, bytesRead, InetAddress.getByName(serverName), port);
+                socket.send(sendPacket);
+            }
+
+            // Close the socket and file input stream
+            fileInputStream.close();
+            socket.close();
+            System.out.println("File sent successfully.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+Server Program (UDPFileServer.java):
+
+import java.io.*;
+import java.net.*;
+
+public class UDPFileServer {
+    public static void main(String[] args) {
+        int port = 6000; // Port number for the server
+        String outputFilePath = "copy.txt"; // Path to save the received file
+
+        try {
+            // Create a DatagramSocket to listen for incoming packets
+            DatagramSocket socket = new DatagramSocket(port);
+            System.out.println("UDP Server is listening on port " + port);
+            FileOutputStream fileOutputStream = new FileOutputStream(outputFilePath);
+            byte[] receiveBuffer = new byte[4096];
+
+            while (true) {
+                // Prepare to receive a packet
+                DatagramPacket receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+                socket.receive(receivePacket);
+
+                // Write received data to the file
+                fileOutputStream.write(receivePacket.getData(), 0, receivePacket.getLength());
+                System.out.println("Received packet from client: " + receivePacket.getAddress() + ":" + receivePacket.getPort());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            // Close the file output stream
+            try {
+                fileOutputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
+
+Part D: Price Management System
+1. TCP Implementation
+Server Program (PriceServer.java):
+
+import java.io.*;
+import java.net.*;
+import java.util.HashMap;
+import java.util.Map;
+
+public class PriceServer {
+    private static Map<String, Double> priceMap = new HashMap<>();
+    private static Map<String, Double> discountMap = new HashMap<>();
+
+    public static void main(String[] args) {
+        int port = 5000; // Server port number
+
+        // Sample data
+        priceMap.put("ITEM001", 100.0);
+        priceMap.put("ITEM002", 200.0);
+        priceMap.put("ITEM003", 300.0);
+        discountMap.put("ITEM001", 10.0); // 10% discount
+        discountMap.put("ITEM002", 20.0); // 20% discount
+        discountMap.put("ITEM003", 30.0); // 30% discount
+
+        try {
+            ServerSocket serverSocket = new ServerSocket(port);
+            System.out.println("Price Server is listening on port " + port);
+
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("Client connected: " + clientSocket.getInetAddress());
+
+                // Handle client in a separate thread
+                new Thread(new PriceHandler(clientSocket)).start();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static class PriceHandler implements Runnable {
+        private Socket clientSocket;
+
+        public PriceHandler(Socket socket) {
+            this.clientSocket = socket;
+        }
+
+        @Override
+        public void run() {
+            try {
+                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+
+                // Read item code from client
+                String itemCode = in.readLine();
+                System.out.println("Received request for item code: " + itemCode);
+
+                // Calculate prices
+                Double initialPrice = priceMap.get(itemCode);
+                Double discount = discountMap.get(itemCode);
+                Double finalPrice = initialPrice - (initialPrice * (discount / 100));
+
+                // Send results back to client
+                if (initialPrice != null && discount != null) {
+                    String response = "Initial Price: " + initialPrice + ", Discount: " + discount + ", Final Price: " + finalPrice;
+                    out.println(response);
+                } else {
+                    out.println("Item not found.");
+                }
+
+                // Close streams and socket
+                in.close();
+                out.close();
+                clientSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
+Client Program (PriceClient.java):
+
+import java.io.*;
+import java.net.*;
+
+public class PriceClient {
+    public static void main(String[] args) {
+        String serverName = "localhost"; // Server IP or hostname
+        int port = 5000; // Server port number
+
+        try {
+            Socket clientSocket = new Socket(serverName, port);
+            System.out.println("Connected to server: " + serverName + " on port " + port);
+
+            // Create input and output streams
+            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+            // Send item code to server
+            String itemCode = "ITEM001"; // Example item code
+            out.println(itemCode);
+            System.out.println("Requested item code: " + itemCode);
+
+            // Receive response from server
+            String response = in.readLine();
+            System.out.println("Received from server: " + response);
+
+            // Close streams and socket
+            in.close();
+            out.close();
+            clientSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+2. UDP Implementation
+Server Program (PriceUDPServer.java):
+
+import java.io.*;
+import java.net.*;
+import java.util.HashMap;
+import java.util.Map;
+
+public class PriceUDPServer {
+    private static Map<String, Double> priceMap = new HashMap<>();
+    private static Map<String, Double> discountMap = new HashMap<>();
+
+    public static void main(String[] ```java
+    String[] args) {
+        int port = 5000; // Server port number
+
+        // Sample data
+        priceMap.put("ITEM001", 100.0);
+        priceMap.put("ITEM002", 200.0);
+        priceMap.put("ITEM003", 300.0);
+        discountMap.put("ITEM001", 10.0); // 10% discount
+        discountMap.put("ITEM002", 20.0); // 20% discount
+        discountMap.put("ITEM003", 30.0); // 30% discount
+
+        try {
+            DatagramSocket socket = new DatagramSocket(port);
+            System.out.println("UDP Price Server is listening on port " + port);
+            byte[] receiveBuffer = new byte[1024];
+
+            while (true) {
+                // Prepare to receive a packet
+                DatagramPacket receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+                socket.receive(receivePacket);
+
+                // Extract item code from the packet
+                String itemCode = new String(receivePacket.getData(), 0, receivePacket.getLength());
+                System.out.println("Received request for item code: " + itemCode);
+
+                // Calculate prices
+                Double initialPrice = priceMap.get(itemCode);
+                Double discount = discountMap.get(itemCode);
+                Double finalPrice = (initialPrice != null && discount != null) ? initialPrice - (initialPrice * (discount / 100)) : null;
+
+                // Prepare response
+                String response;
+                if (initialPrice != null && discount != null) {
+                    response = "Initial Price: " + initialPrice + ", Discount: " + discount + ", Final Price: " + finalPrice;
+                } else {
+                    response = "Item not found.";
+                }
+
+                // Send response back to client
+                InetAddress clientAddress = receivePacket.getAddress();
+                int clientPort = receivePacket.getPort();
+                DatagramPacket sendPacket = new DatagramPacket(response.getBytes(), response.length(), clientAddress, clientPort);
+                socket.send(sendPacket);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+Client Program (PriceUDPClient.java):
+
+import java.io.*;
+import java.net.*;
+
+public class PriceUDPClient {
+    public static void main(String[] args) {
+        String serverName = "localhost"; // Server IP or hostname
+        int port = 5000; // Server port number
+
+        try {
+            DatagramSocket socket = new DatagramSocket();
+            String itemCode = "ITEM001"; // Example item code
+            byte[] sendBuffer = itemCode.getBytes();
+
+            // Send item code to server
+            DatagramPacket sendPacket = new DatagramPacket(sendBuffer, sendBuffer.length, InetAddress.getByName(serverName), port);
+            socket.send(sendPacket);
+            System.out.println("Requested item code: " + itemCode);
+
+            // Prepare to receive response
+            byte[] receiveBuffer = new byte[1024];
+            DatagramPacket receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+            socket.receive(receivePacket);
+
+            // Display response from server
+            String response = new String(receivePacket.getData(), 0, receivePacket.getLength());
+            System.out.println("Received from server: " + response);
+
+            // Close the socket
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
